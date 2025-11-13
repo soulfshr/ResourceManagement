@@ -22,38 +22,45 @@ A web-based resource management application designed to help project managers ef
 - **FR-2.4**: System shall allow assignment of required skills and effort estimates to activities
 - **FR-2.5**: System shall support project templates for common project types
 
-### 1.3 Scenario Planning
-- **FR-3.1**: System shall allow users to create multiple "what-if" scenarios
-- **FR-3.2**: System shall enable comparison between different resource allocation scenarios
-- **FR-3.3**: System shall allow saving and naming scenarios for future reference
-- **FR-3.4**: System shall support cloning scenarios as a starting point for variations
-- **FR-3.5**: System shall highlight differences between scenarios
+### 1.3 Time Tracking & Granularity
+- **FR-3.1**: System shall track resource allocations at weekly granularity
+- **FR-3.2**: System shall support weekly capacity planning (e.g., 40 hours per week standard)
+- **FR-3.3**: System shall allow allocation percentages to be set per week
+- **FR-3.4**: System shall display weekly views in calendars and timelines
+- **FR-3.5**: System shall aggregate weekly data for monthly and quarterly reporting
 
-### 1.4 Resource Booking
-- **FR-4.1**: System shall provide a booking interface to allocate resources to projects/activities
-- **FR-4.2**: System shall show real-time availability during booking process
-- **FR-4.3**: System shall support tentative bookings vs. confirmed bookings
-- **FR-4.4**: System shall allow bulk booking operations (e.g., book entire team)
-- **FR-4.5**: System shall maintain booking history and audit trail
+### 1.4 Scenario Planning
+- **FR-4.1**: System shall allow users to create multiple "what-if" scenarios
+- **FR-4.2**: System shall enable comparison between different resource allocation scenarios
+- **FR-4.3**: System shall allow saving and naming scenarios for future reference
+- **FR-4.4**: System shall support cloning scenarios as a starting point for variations
+- **FR-4.5**: System shall highlight differences between scenarios
 
-### 1.5 Workload Analysis
-- **FR-5.1**: System shall identify over-allocated resources (>100% capacity)
-- **FR-5.2**: System shall identify under-utilized resources (<80% capacity)
-- **FR-5.3**: System shall show available capacity by time period
-- **FR-5.4**: System shall provide workload heatmaps/visualizations
-- **FR-5.5**: System shall forecast future capacity constraints
+### 1.5 Resource Booking
+- **FR-5.1**: System shall provide a booking interface to allocate resources to projects/activities
+- **FR-5.2**: System shall show real-time availability during booking process
+- **FR-5.3**: System shall support tentative bookings vs. confirmed bookings
+- **FR-5.4**: System shall allow bulk booking operations (e.g., book entire team)
+- **FR-5.5**: System shall maintain booking history and audit trail
 
-### 1.6 Reporting
-- **FR-6.1**: System shall generate summary status reports
-- **FR-6.2**: System shall provide resource allocation reports by:
+### 1.6 Workload Analysis
+- **FR-6.1**: System shall identify over-allocated resources (>100% capacity)
+- **FR-6.2**: System shall identify under-utilized resources (<80% capacity)
+- **FR-6.3**: System shall show available capacity by week
+- **FR-6.4**: System shall provide workload heatmaps/visualizations by week
+- **FR-6.5**: System shall forecast future capacity constraints on a weekly basis
+
+### 1.7 Reporting
+- **FR-7.1**: System shall generate summary status reports
+- **FR-7.2**: System shall provide resource allocation reports by:
   - Team
   - Individual person
   - Project
-  - Time period
+  - Time period (weekly, monthly, quarterly)
   - Department/organizational unit
-- **FR-6.3**: System shall support exporting reports to PDF, Excel, CSV
-- **FR-6.4**: System shall provide utilization metrics (actual vs. planned)
-- **FR-6.5**: System shall offer customizable dashboard views
+- **FR-7.3**: System shall support exporting reports to PDF, Excel, CSV
+- **FR-7.4**: System shall provide utilization metrics (actual vs. planned)
+- **FR-7.5**: System shall offer customizable dashboard views
 
 ---
 
@@ -394,9 +401,10 @@ Resource Allocations
 ├── resource_id (foreign key)
 ├── project_id (foreign key)
 ├── activity_id (foreign key, nullable)
-├── start_date
-├── end_date
-├── allocation_percentage
+├── week_start_date (Monday of the week)
+├── week_end_date (Sunday of the week)
+├── allocation_percentage (0-100)
+├── allocated_hours (calculated from percentage)
 ├── status (tentative, confirmed, completed)
 └── scenario_id (for what-if planning)
 
@@ -417,11 +425,20 @@ Scenarios
 - Use database views or queries to compare scenarios
 - Implement diff algorithm to highlight changes
 
+#### Weekly Time Tracking
+- All allocations are tracked on a weekly basis (Monday-Sunday)
+- Week identifiers use ISO week format (YYYY-Www, e.g., 2025-W46)
+- Support partial weeks for resources starting/ending mid-week
+- Calendar UI displays weekly grids for easy visualization
+- Allow splitting allocations across multiple weeks
+- Weekly capacity defaults to 40 hours (configurable per resource)
+
 #### Over/Under Allocation Detection
-- Calculate total allocation percentage per resource per time period
+- Calculate total allocation percentage per resource per week
 - Use color coding: Red (>100%), Yellow (80-100%), Green (<80%)
-- Run periodic background jobs to update allocation status
+- Run periodic background jobs to update weekly allocation status
 - Implement real-time validation on booking operations
+- Alert managers when weekly capacity exceeds thresholds
 
 #### Booking System
 - Implement drag-and-drop interface for intuitive booking
@@ -491,14 +508,13 @@ Real-time updates via:
 
 ## 7. Open Questions & Discussion Points
 
-1. **Time Granularity**: Should allocation be tracked at day, week, or hour level?
-2. **Approval Workflows**: Do resource allocations require approval before confirmation?
-3. **Integration Requirements**: Are there existing systems to integrate with (HR systems, calendars, etc.)?
-4. **Multi-tenancy**: Will this support multiple organizations/clients in one instance?
-5. **Localization**: Do we need to support multiple languages and time zones?
-6. **Historical Data**: How far back should historical allocation data be retained?
-7. **Custom Fields**: Should the system support custom fields for resources/projects?
-8. **Department Hierarchy**: Should we support multi-level organizational hierarchies (e.g., Division > Department > Team)?
+1. **Approval Workflows**: Do resource allocations require approval before confirmation?
+2. **Integration Requirements**: Are there existing systems to integrate with (HR systems, calendars, etc.)?
+3. **Multi-tenancy**: Will this support multiple organizations/clients in one instance?
+4. **Localization**: Do we need to support multiple languages and time zones?
+5. **Historical Data**: How far back should historical allocation data be retained?
+6. **Custom Fields**: Should the system support custom fields for resources/projects?
+7. **Department Hierarchy**: Should we support multi-level organizational hierarchies (e.g., Division > Department > Team)?
 
 ---
 
@@ -514,9 +530,10 @@ Real-time updates via:
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-11-13
 **Status**: Draft - Open for Collaboration
 **Change Log**:
+- v1.2: Defined weekly time granularity for resource allocation tracking
 - v1.1: Added comprehensive User Roles & Permissions section (Administrator, Manager, User)
 - v1.0: Initial requirements document
