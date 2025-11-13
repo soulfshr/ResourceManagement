@@ -47,11 +47,14 @@ A web-based resource management application designed to help project managers ef
 - **FR-4.5**: System shall highlight differences between scenarios
 
 ### 1.5 Resource Booking
-- **FR-5.1**: System shall provide a booking interface to allocate resources to projects/activities
-- **FR-5.2**: System shall show real-time availability during booking process
-- **FR-5.3**: System shall support tentative bookings vs. confirmed bookings
-- **FR-5.4**: System shall allow bulk booking operations (e.g., book entire team)
-- **FR-5.5**: System shall maintain booking history and audit trail
+- **FR-5.1**: System shall provide a visual drag-and-drop booking interface to allocate resources to projects/activities
+- **FR-5.2**: System shall support dragging resources onto project timelines for intuitive allocation
+- **FR-5.3**: System shall provide visual feedback during drag operations (valid/invalid drop zones, capacity warnings)
+- **FR-5.4**: System shall show real-time availability during booking process
+- **FR-5.5**: System shall support tentative bookings vs. confirmed bookings
+- **FR-5.6**: System shall allow bulk booking operations (e.g., book entire team)
+- **FR-5.7**: System shall maintain booking history and audit trail
+- **FR-5.8**: System shall support keyboard shortcuts for power users
 
 ### 1.6 Workload Analysis
 - **FR-6.1**: System shall identify over-allocated resources (>100% capacity)
@@ -60,17 +63,48 @@ A web-based resource management application designed to help project managers ef
 - **FR-6.4**: System shall provide workload heatmaps/visualizations by week
 - **FR-6.5**: System shall forecast future capacity constraints on a weekly basis
 
-### 1.7 Reporting
-- **FR-7.1**: System shall generate summary status reports
-- **FR-7.2**: System shall provide resource allocation reports by:
+### 1.7 Time-Off Management
+- **FR-7.1**: System shall allow resources to submit time-off requests (vacation, sick leave, holidays)
+- **FR-7.2**: System shall automatically adjust resource capacity based on approved time-off
+- **FR-7.3**: System shall display time-off on resource calendars and capacity views
+- **FR-7.4**: System shall alert managers when allocations conflict with scheduled time-off
+- **FR-7.5**: System shall support recurring time-off patterns (e.g., every Friday off)
+- **FR-7.6**: System shall integrate time-off data into capacity forecasting
+- **FR-7.7**: System shall track time-off balances and accruals (optional)
+
+### 1.8 Financial Management & Profitability
+- **FR-8.1**: System shall track billable rates for resources (hourly or weekly rates)
+- **FR-8.2**: System shall track cost rates for internal resource costing
+- **FR-8.3**: System shall calculate project costs based on resource allocations and rates
+- **FR-8.4**: System shall distinguish between billable and non-billable time
+- **FR-8.5**: System shall provide real-time profitability calculations (revenue vs. cost)
+- **FR-8.6**: System shall support different rate structures (standard, overtime, contractor rates)
+- **FR-8.7**: System shall generate financial reports by project, resource, and time period
+- **FR-8.8**: System shall track budget vs. actual spend for projects
+- **FR-8.9**: System shall forecast project costs based on planned allocations
+
+### 1.9 AI-Powered Resource Recommendations
+- **FR-9.1**: System shall analyze project requirements and recommend suitable resources based on skills
+- **FR-9.2**: System shall suggest optimal resource allocations to balance workload across team
+- **FR-9.3**: System shall identify potential scheduling conflicts before they occur
+- **FR-9.4**: System shall recommend alternative resources when primary choices are unavailable
+- **FR-9.5**: System shall learn from historical allocation patterns to improve recommendations
+- **FR-9.6**: System shall suggest skill development opportunities based on project needs
+- **FR-9.7**: System shall provide confidence scores for resource match recommendations
+
+### 1.10 Reporting
+- **FR-10.1**: System shall generate summary status reports
+- **FR-10.2**: System shall provide resource allocation reports by:
   - Team
   - Individual person
   - Project
   - Time period (weekly, monthly, quarterly)
   - Department/organizational unit
-- **FR-7.3**: System shall support exporting reports to PDF, Excel, CSV
-- **FR-7.4**: System shall provide utilization metrics (actual vs. planned)
-- **FR-7.5**: System shall offer customizable dashboard views
+- **FR-10.3**: System shall support exporting reports to PDF, Excel, CSV
+- **FR-10.4**: System shall provide utilization metrics (actual vs. planned)
+- **FR-10.5**: System shall offer customizable dashboard views
+- **FR-10.6**: System shall include financial metrics in reports (costs, revenue, profitability)
+- **FR-10.7**: System shall provide time-off summary reports by resource and team
 
 ---
 
@@ -331,7 +365,9 @@ Audit_Log
 - **NFR-1.1**: Interface must be intuitive with minimal training required
 - **NFR-1.2**: System shall provide contextual help and tooltips
 - **NFR-1.3**: System shall use consistent UI patterns throughout
-- **NFR-1.4**: System shall be responsive and work on tablets and desktops
+- **NFR-1.4**: System shall be fully responsive and work on tablets, desktops, and mobile devices
+- **NFR-1.5**: Drag-and-drop interface shall be smooth with <100ms response time
+- **NFR-1.6**: AI recommendations shall return results within 2 seconds
 
 ### 3.2 Performance
 - **NFR-2.1**: Page load times shall be under 2 seconds
@@ -408,6 +444,9 @@ Resources (Team Members)
 ├── employment_status (enum: "FTE", "Contractor")
 ├── department_id (foreign key to Departments)
 ├── weekly_capacity_hours (default: 40 for FTE, configurable)
+├── billable_rate (decimal, hourly or weekly rate for client billing)
+├── cost_rate (decimal, internal cost rate for profitability calculations)
+├── currency (string, e.g., "USD", "EUR")
 ├── start_date (employment start date)
 ├── end_date (nullable, for contractors or departing employees)
 ├── is_active (boolean, for soft deletes)
@@ -422,8 +461,13 @@ Projects
 ├── start_date
 ├── end_date
 ├── status
-├── owner
-└── budget/effort_estimate
+├── owner (foreign key to Resources)
+├── budget (decimal, total project budget)
+├── currency (string, e.g., "USD", "EUR")
+├── is_billable (boolean, whether project is client-billable)
+├── client_name (string, optional)
+├── effort_estimate (hours)
+└── created_date
 
 Activities/Tasks
 ├── id
@@ -445,8 +489,27 @@ Resource Allocations
 ├── week_end_date (Sunday of the week)
 ├── allocation_percentage (0-100)
 ├── allocated_hours (calculated from percentage)
+├── is_billable (boolean, override from project default)
+├── billable_rate_at_time (decimal, snapshot of rate at allocation time)
+├── cost_rate_at_time (decimal, snapshot of cost at allocation time)
+├── calculated_cost (decimal, allocated_hours * cost_rate_at_time)
+├── calculated_revenue (decimal, allocated_hours * billable_rate_at_time if billable)
 ├── status (tentative, confirmed, completed)
 └── scenario_id (for what-if planning)
+
+TimeOff
+├── id
+├── resource_id (foreign key)
+├── start_date (date)
+├── end_date (date)
+├── type (enum: "Vacation", "Sick Leave", "Holiday", "Personal", "Other")
+├── status (enum: "Pending", "Approved", "Rejected", "Cancelled")
+├── hours_per_day (decimal, for partial day off)
+├── notes (text, optional)
+├── approved_by (foreign key to Resources, nullable)
+├── approved_date (timestamp, nullable)
+├── created_date (timestamp)
+└── is_recurring (boolean, for recurring patterns)
 
 Scenarios
 ├── id
@@ -499,11 +562,94 @@ Scenarios
 - Implement real-time validation on booking operations
 - Alert managers when weekly capacity exceeds thresholds
 
-#### Booking System
-- Implement drag-and-drop interface for intuitive booking
-- Use optimistic locking to prevent concurrent booking conflicts
-- Provide visual feedback for capacity constraints
+#### Drag-and-Drop Booking System
+- **UI Library**: Use react-dnd, @dnd-kit/core, or vue-draggable for drag-and-drop functionality
+- **Visual Feedback**:
+  - Show drop zones with highlighted borders when dragging
+  - Display capacity bars that update in real-time during drag
+  - Color-code drop zones (green=valid, red=over-capacity, yellow=warning)
+  - Ghost image of resource card follows cursor
+- **Interaction Flow**:
+  - Drag resource from left panel onto project timeline
+  - Drop triggers allocation creation modal with pre-filled data
+  - Support multi-select drag (drag multiple resources at once)
+  - Keyboard shortcuts: Ctrl+drag to copy, Shift+drag to extend allocation
+- **Performance**:
+  - Use optimistic locking to prevent concurrent booking conflicts
+  - Debounce capacity calculations during drag
+  - Virtual scrolling for large resource lists
+- **Accessibility**: Keyboard-only navigation alternative for drag-and-drop
 - Send notifications for booking confirmations and changes
+
+#### Time-Off Management Integration
+- **Automatic Capacity Adjustment**:
+  - Query TimeOff table for approved time-off during allocation calculations
+  - Reduce available capacity by time-off hours for the week
+  - Display time-off as blocked periods on resource calendars
+  - Color-code time-off differently from allocations (e.g., gray/striped pattern)
+- **Conflict Detection**:
+  - Alert managers when attempting to allocate resources during approved time-off
+  - Show time-off in booking interface before allocation is made
+  - Suggest alternative resources when conflicts detected
+- **Calendar Integration**:
+  - Sync time-off with external calendars (Google, Outlook)
+  - Display time-off on capacity heatmaps
+  - Include time-off in capacity forecasting calculations
+- **Approval Workflow**:
+  - Email notifications to managers for time-off requests
+  - One-click approve/reject from email or dashboard
+  - Automatic capacity recalculation upon approval
+
+#### Financial Tracking & Profitability
+- **Rate Snapshots**:
+  - Capture billable_rate and cost_rate at time of allocation
+  - Store in allocation record to preserve historical accuracy
+  - Allow rate changes without affecting past allocations
+- **Real-Time Calculations**:
+  - Calculate cost: allocated_hours × cost_rate_at_time
+  - Calculate revenue: allocated_hours × billable_rate_at_time (if billable)
+  - Calculate margin: (revenue - cost) / revenue × 100
+  - Update calculations when allocation changes
+- **Project-Level Aggregation**:
+  - Sum all allocation costs for total project cost
+  - Sum all allocation revenue for total project revenue
+  - Compare against project budget for variance tracking
+  - Display budget burn rate and projected completion cost
+- **Reporting**:
+  - Financial dashboard with profitability by project, resource, department
+  - Budget vs. actual variance reports
+  - Resource utilization by billable vs. non-billable time
+  - Revenue forecasting based on planned allocations
+- **Multi-Currency Support**:
+  - Store currency per resource and project
+  - Convert to base currency for aggregated reporting
+  - Handle exchange rate updates
+
+#### AI-Powered Resource Recommendations
+- **Machine Learning Approach**:
+  - Train model on historical allocation data
+  - Features: skills, past project types, team composition, success metrics
+  - Use supervised learning for resource-project matching
+  - Recommend resources with confidence scores (0-100%)
+- **Recommendation Engine**:
+  - **Skill Matching**: NLP to match project descriptions with resource skills
+  - **Availability Analysis**: Check capacity across date range
+  - **Workload Balancing**: Prioritize under-utilized resources
+  - **Team Dynamics**: Consider past successful team combinations
+  - **Learning Rate**: Feedback loop from allocation success/failure
+- **Implementation Options**:
+  - **Simple**: Rule-based matching (skills + availability)
+  - **Intermediate**: TF-IDF for skill matching + heuristic scoring
+  - **Advanced**: Neural network for resource-project matching
+- **User Interface**:
+  - "Suggest Resources" button on project allocation screen
+  - Display top 5 recommendations with match scores
+  - Show reasoning: "Match: 85% - Has required skills: React, Node.js"
+  - Allow manager to accept suggestion with one click
+- **Continuous Improvement**:
+  - Track which recommendations are accepted/rejected
+  - Learn from manager override patterns
+  - Adjust algorithm weights based on feedback
 
 #### Reporting Engine
 - Pre-calculate common aggregations for performance
@@ -522,11 +668,23 @@ RESTful API endpoints structure:
 /api/scenarios
 /api/reports
 /api/availability
+/api/timeoff
+/api/financial/profitability
+/api/financial/project-costs
+/api/recommendations/resources
+/api/recommendations/feedback
 ```
 
 Real-time updates via:
-- WebSockets for live capacity updates
+- WebSockets for live capacity updates during drag-and-drop
 - Server-Sent Events (SSE) for notifications
+- WebSocket updates for financial calculations
+
+Additional Technology Requirements:
+- **Drag-and-Drop**: React DnD (@dnd-kit/core) or Vue Draggable
+- **AI/ML**: Python-based recommendation service (scikit-learn, TensorFlow Lite, or rule engine)
+- **Financial Calculations**: Background job queue (Bull, Celery) for aggregations
+- **Real-Time**: Redis pub/sub for capacity update broadcasts
 
 ---
 
@@ -534,34 +692,108 @@ Real-time updates via:
 
 ### 5.1 Key Views
 
-1. **Dashboard** - Overview with key metrics and alerts
+1. **Dashboard** - Overview with key metrics, alerts, and financial summaries
+   - Utilization metrics by team/department
+   - Over/under-allocation alerts
+   - Budget vs. actual spend widgets
+   - Upcoming time-off notifications
+   - AI recommendations panel
+
 2. **Resource View** - List/grid of all resources with current allocation
+   - Filterable by skills, department, employment status
+   - Real-time capacity indicators (with time-off adjustments)
+   - Billable rate and cost rate (for authorized users)
+   - Drag-and-drop enabled for quick allocation
+
 3. **Project View** - List of projects with resource assignments
-4. **Calendar View** - Timeline showing resource bookings
-5. **Booking Interface** - Drag-and-drop allocation tool
+   - Financial summary (budget, cost, revenue, profitability)
+   - Resource allocation timeline
+   - Budget burn rate indicator
+   - "Suggest Resources" AI button
+
+4. **Calendar View** - Timeline showing resource bookings and time-off
+   - Weekly grid view (primary)
+   - Color-coded: allocations (blue), time-off (gray), over-allocation (red)
+   - Drag-and-drop booking directly on calendar
+   - Time-off displayed as blocked periods
+
+5. **Booking Interface** - Interactive drag-and-drop allocation tool
+   - Left panel: Available resources with capacity bars
+   - Right panel: Project timeline with drop zones
+   - Real-time capacity calculations during drag
+   - AI suggestions panel showing recommended matches
+
 6. **Scenario Planner** - Side-by-side scenario comparison
-7. **Reports** - Customizable report generation interface
+   - Financial impact comparison (cost, revenue differences)
+   - Resource utilization differences
+   - Timeline view with highlighted changes
+
+7. **Time-Off Management** - Submit and approve time-off requests
+   - Calendar view of team time-off
+   - Approval workflow interface
+   - Time-off balance tracker
+
+8. **Financial Dashboard** - Profitability and budget tracking
+   - Project profitability matrix
+   - Resource utilization by billable vs. non-billable
+   - Revenue forecasting charts
+   - Budget variance reports
+
+9. **Reports** - Customizable report generation interface
+   - Financial reports (cost, revenue, profitability)
+   - Utilization reports with time-off data
+   - Skills and capacity reports
 
 ### 5.2 Visualization Components
 
-- **Capacity Heatmap**: Shows allocation density across time periods
-- **Gantt Chart**: Project timelines with resource assignments
-- **Utilization Graph**: Bar/line charts showing utilization trends
-- **Resource Matrix**: Grid showing resources vs. projects
-- **Skills Matrix**: Visualization of team skills distribution
+- **Capacity Heatmap**: Shows allocation density across time periods (includes time-off)
+- **Gantt Chart**: Project timelines with resource assignments and financial data
+- **Utilization Graph**: Bar/line charts showing utilization trends (billable vs. non-billable)
+- **Resource Matrix**: Grid showing resources vs. projects with drag-and-drop
+- **Skills Matrix**: Visualization of team skills distribution with AI gap analysis
+- **Financial Charts**: Revenue, cost, and profitability trends
+- **Time-Off Calendar**: Team time-off visualization integrated with capacity
+- **AI Recommendation Cards**: Visual match scores and reasoning for resource suggestions
 
 ---
 
 ## 6. Future Enhancements (Phase 2)
 
-- Integration with time tracking systems
-- Mobile application for resource approval workflows
-- AI-powered resource recommendations
+### Mobile Application
+- **Native iOS and Android apps** for on-the-go resource management
+- Mobile-responsive web version as interim solution
+- Key mobile features:
+  - View personal assignments and schedule
+  - Submit and approve time-off requests
+  - Receive push notifications for allocation changes
+  - Quick capacity checks for managers
+  - Approve/reject resource bookings
+  - View team utilization dashboards
+- Offline mode with sync when online
+- Mobile-optimized UI with simplified workflows
+
+### Additional Integrations
+- Integration with time tracking systems (Harvest, Toggl, Clockify)
+- Integration with project management tools (Jira, Asana, Monday.com)
+- HRIS integration for automated employee data sync
+- SSO integration (Okta, Azure AD, Google Workspace)
+- Slack/Teams integration for notifications and approvals
+
+### Advanced Analytics & AI
 - Skills gap analysis and training recommendations
-- Budget tracking and cost allocation
-- Resource forecasting based on historical data
-- Integration with project management tools (Jira, Asana, etc.)
-- Advanced analytics and predictive modeling
+- Advanced predictive modeling for resource demand
+- Machine learning for project success prediction
+- Anomaly detection for unusual allocation patterns
+- Natural language queries for reports ("Show me all React developers available next month")
+
+### Enhanced Features
+- Resource forecasting based on historical data and trends
+- Advanced budget tracking with purchase orders and invoices
+- Multi-project dependencies and critical path analysis
+- Resource pools and shared resources across organizations
+- Custom workflows and approval chains
+- Advanced time tracking with activity monitoring
+- Resource benchmarking and industry comparisons
 
 ---
 
@@ -589,10 +821,17 @@ Real-time updates via:
 
 ---
 
-**Document Version**: 1.3
+**Document Version**: 1.4
 **Last Updated**: 2025-11-13
 **Status**: Draft - Open for Collaboration
 **Change Log**:
+- v1.4: Added market-leading features:
+  - Visual drag-and-drop booking interface
+  - AI-powered resource recommendations
+  - Financial tracking and profitability management (billable rates, costs, revenue)
+  - Time-off management with automatic capacity adjustments
+  - Updated data model with TimeOff and financial fields
+  - Expanded Future Enhancements with mobile app details
 - v1.3: Defined specific Resource fields (Name, Title, Skills, Manager, Employment Status, Department)
 - v1.2: Defined weekly time granularity for resource allocation tracking
 - v1.1: Added comprehensive User Roles & Permissions section (Administrator, Manager, User)
