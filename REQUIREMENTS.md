@@ -9,11 +9,21 @@ A web-based resource management application designed to help project managers ef
 ## 1. Functional Requirements
 
 ### 1.1 Resource Management
-- **FR-1.1**: System shall maintain a database of team members with their skills, availability, and capacity
+- **FR-1.1**: System shall maintain a database of team members with the following required fields:
+  - Name
+  - Email (unique identifier)
+  - Title
+  - Skills (multi-value field)
+  - Manager (hierarchical relationship)
+  - Employment Status (FTE or Contractor)
+  - Department
+  - Weekly Capacity Hours
 - **FR-1.2**: System shall allow resources to be allocated to multiple projects and activities
-- **FR-1.3**: System shall track resource allocation by time periods (daily, weekly, monthly)
+- **FR-1.3**: System shall support different weekly capacity defaults based on employment status (e.g., 40 hours for FTE)
 - **FR-1.4**: System shall support percentage-based allocation (e.g., 50% on Project A, 50% on Project B)
-- **FR-1.5**: System shall prevent double-booking or alert when resources exceed 100% capacity
+- **FR-1.5**: System shall prevent double-booking or alert when resources exceed 100% weekly capacity
+- **FR-1.6**: System shall track resource start and end dates for contract management
+- **FR-1.7**: System shall support manager-resource relationships for organizational hierarchy
 
 ### 1.2 Project & Activity Management
 - **FR-2.1**: System shall allow creation and management of projects
@@ -365,15 +375,45 @@ Audit_Log
 ### 4.2 Data Model (Core Entities)
 
 ```
+Departments
+├── id
+├── name (required)
+├── description (optional)
+├── parent_department_id (foreign key, for hierarchical structure)
+├── created_date
+└── is_active
+
+Skills (Optional - for normalized skill management)
+├── id
+├── name (required, unique)
+├── category (e.g., "Programming Language", "Framework", "Tool")
+├── description (optional)
+└── created_date
+
+Resource_Skills (Junction table for many-to-many relationship)
+├── id
+├── resource_id (foreign key to Resources)
+├── skill_id (foreign key to Skills)
+├── proficiency_level (enum: "Beginner", "Intermediate", "Advanced", "Expert")
+└── years_of_experience (optional)
+
 Resources (Team Members)
 ├── id
-├── name
-├── email
-├── role/title
-├── department
-├── skills (array)
-├── capacity (hours per week)
-└── availability_calendar
+├── name (required)
+├── email (required, unique)
+├── title (required)
+├── skills (implementation option 1: JSON array like ["JavaScript", "React", "Node.js"])
+│         (implementation option 2: via Resource_Skills junction table - recommended)
+├── manager_id (foreign key to Resources, nullable for top-level)
+├── employment_status (enum: "FTE", "Contractor")
+├── department_id (foreign key to Departments)
+├── weekly_capacity_hours (default: 40 for FTE, configurable)
+├── start_date (employment start date)
+├── end_date (nullable, for contractors or departing employees)
+├── is_active (boolean, for soft deletes)
+├── phone (optional)
+├── location (optional)
+└── profile_photo_url (optional)
 
 Projects
 ├── id
@@ -425,13 +465,32 @@ Scenarios
 - Use database views or queries to compare scenarios
 - Implement diff algorithm to highlight changes
 
+#### Resource Field Implementation
+- **Skills**: Store as array or many-to-many relationship with Skills table
+  - Support autocomplete for existing skills
+  - Allow adding new skills on-the-fly
+  - Track skill proficiency levels (optional future enhancement)
+  - Enable filtering and searching by skills
+- **Manager Hierarchy**: Self-referencing foreign key in Resources table
+  - Enables org chart visualization
+  - Supports manager-based permission scoping
+  - Allows reporting chains (who reports to whom)
+- **Employment Status**: Enum field with two values ("FTE", "Contractor")
+  - Different default weekly capacity (40 hours FTE vs. configurable for contractors)
+  - Affects reporting and forecasting
+  - Optional end_date field primarily for contractors
+- **Department**: Foreign key to Departments table
+  - Supports hierarchical department structure
+  - Enables department-based resource filtering
+  - Used for manager scope limitations
+
 #### Weekly Time Tracking
 - All allocations are tracked on a weekly basis (Monday-Sunday)
 - Week identifiers use ISO week format (YYYY-Www, e.g., 2025-W46)
 - Support partial weeks for resources starting/ending mid-week
 - Calendar UI displays weekly grids for easy visualization
 - Allow splitting allocations across multiple weeks
-- Weekly capacity defaults to 40 hours (configurable per resource)
+- Weekly capacity defaults: 40 hours for FTE, configurable per contractor
 
 #### Over/Under Allocation Detection
 - Calculate total allocation percentage per resource per week
@@ -530,10 +589,11 @@ Real-time updates via:
 
 ---
 
-**Document Version**: 1.2
+**Document Version**: 1.3
 **Last Updated**: 2025-11-13
 **Status**: Draft - Open for Collaboration
 **Change Log**:
+- v1.3: Defined specific Resource fields (Name, Title, Skills, Manager, Employment Status, Department)
 - v1.2: Defined weekly time granularity for resource allocation tracking
 - v1.1: Added comprehensive User Roles & Permissions section (Administrator, Manager, User)
 - v1.0: Initial requirements document
